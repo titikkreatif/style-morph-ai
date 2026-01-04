@@ -1,6 +1,6 @@
 {
-  "name": "Copy of StyleMorph AI",
-  "description": "A production-ready AI fashion tool for virtual try-ons and clothing swaps. Preserves identity and pose while naturally fitting new garments using cutting-edge AI.",
+  "name": "Titik Kreatif Studio",
+  "description": "Professional AI fashion studio for virtual try-ons and high-fidelity clothing swaps. Preserving identity and pose with creative precision.",
   "requestFramePermissions": [
     "camera"
   ]

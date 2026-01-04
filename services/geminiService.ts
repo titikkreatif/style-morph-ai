@@ -1,51 +1,50 @@
 
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { GenerationConfig } from "../types";
 
 export class GeminiService {
-  private ai: GoogleGenAI;
-
-  constructor() {
-    this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
-  }
-
   async performClothingSwap(
     personBase64: string,
     garmentBase64: string,
     config: GenerationConfig
   ): Promise<string> {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
+    const isPro = config.engine === 'pro';
+    const modelName = isPro ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image';
+
     const prompt = `
-      TASK: Perform a high-fidelity virtual try-on / clothing swap.
-      IMAGE 1: A person posing.
-      IMAGE 2: A garment to be fitted onto the person in Image 1.
+      TASK: Perform a high-fidelity virtual try-on and clothing swap.
+      ${isPro && config.customPrompt ? `PRIMARY CREATIVE DIRECTION: ${config.customPrompt}` : "Goal: Naturally fit the garment onto the subject."}
       
-      INSTRUCTIONS:
-      1. Detect the person in Image 1 and the garment in Image 2.
-      2. Remove the existing upper-body clothing from the person in Image 1.
-      3. Fit the garment from Image 2 naturally onto the person's body.
-      4. FIT STYLE: ${config.fit}.
-      5. SLEEVE STYLE: ${config.sleeve}.
-      6. REALISM LEVEL: ${config.realism * 100}%.
-      7. CRITICAL: Preserve the person's identity (face, hair, skin tone), original pose, and the original background perfectly.
-      8. Synthesize realistic fabric folds, shadows, and lighting based on the environment in Image 1.
-      9. ${config.colorCorrection ? "Perform advanced color matching to ensure the garment matches the scene lighting." : ""}
+      TECHNICAL SPECS:
+      - FIT STYLE: ${config.fit}
+      - SLEEVE TYPE: ${config.sleeve}
+      - REALISM THRESHOLD: ${config.realism * 100}%
+      - COLOR CALIBRATION: ${config.colorCorrection ? "Enabled" : "Disabled"}
       
-      Output ONLY the final edited image.
+      CORE CONSTRAINTS:
+      1. Use Image 1 as the source subject. Maintain their face and core identity.
+      2. Use Image 2 as the source garment. Map its texture onto the subject in Image 1.
+      3. Lighting must be consistent.
+      
+      Output ONLY the final synthesized image.
     `;
 
     try {
-      const response = await this.ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
+      const response = await ai.models.generateContent({
+        model: modelName,
         contents: {
           parts: [
+            { text: prompt },
             { inlineData: { mimeType: 'image/jpeg', data: personBase64 } },
-            { inlineData: { mimeType: 'image/jpeg', data: garmentBase64 } },
-            { text: prompt }
+            { inlineData: { mimeType: 'image/jpeg', data: garmentBase64 } }
           ]
         },
         config: {
           imageConfig: {
-            aspectRatio: "3:4"
+            aspectRatio: "3:4",
+            ...(isPro ? { imageSize: "1K" } : {})
           }
         }
       });
@@ -61,12 +60,15 @@ export class GeminiService {
       }
 
       if (!imageUrl) {
-        throw new Error("Model failed to generate an image output.");
+        throw new Error("The AI engine failed to return an image.");
       }
 
       return imageUrl;
-    } catch (error) {
+    } catch (error: any) {
       console.error("AI Generation Error:", error);
+      if (error.message?.includes("Requested entity was not found") && isPro) {
+        throw new Error("API_KEY_MISSING");
+      }
       throw error;
     }
   }

@@ -16,6 +16,8 @@ export interface GenerationConfig {
   sleeve: SleeveLength;
   realism: number;
   colorCorrection: boolean;
+  customPrompt?: string;
+  engine: 'standard' | 'pro';
 }
 
 export interface GenerationResult {
@@ -27,9 +29,22 @@ export interface GenerationResult {
   config: GenerationConfig;
 }
 
+export interface WebsiteConfig {
+  siteName: string;
+  logoUrl: string;
+  primaryColor: string; // Hex code
+  promoText: string;
+  showPromoBanner: boolean;
+  layoutStyle: 'modern' | 'classic' | 'minimal';
+  heroAlignment: 'left' | 'center';
+  showTestimonials: boolean;
+}
+
 export enum Page {
   LANDING = 'landing',
   TOOL = 'tool',
   PRICING = 'pricing',
-  DASHBOARD = 'dashboard'
+  DASHBOARD = 'dashboard',
+  LOGIN = 'login',
+  ADMIN = 'admin'
 }
