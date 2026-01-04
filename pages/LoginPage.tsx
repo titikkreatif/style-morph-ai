@@ -21,10 +21,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onNavigate
     setIsLoading(true);
     setError('');
 
+    const trimmedUser = username.trim();
+
     setTimeout(() => {
-      if (username.trim() === 'tkproject' && password === 'Bapaklak@8') {
-        onLoginSuccess(username.trim());
-      } else {
+      // Check for Admin credentials
+      if (trimmedUser === 'tkproject' && password === 'Bapaklak@8') {
+        onLoginSuccess(trimmedUser);
+      } 
+      // Check for Standard User credentials
+      else if (trimmedUser === 'tkuser' && password === 'bapaklak') {
+        onLoginSuccess(trimmedUser);
+      } 
+      else {
         setError('Invalid credentials. Please verify your studio access.');
         setIsLoading(false);
       }
@@ -101,8 +109,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onNavigate
           </Button>
         </form>
 
-        <div className="mt-8 text-center">
-          <p className="text-sm text-slate-500">
+        <div className="mt-8 text-center text-xs text-slate-500 space-y-1">
+          <p>Standard User: tkuser / bapaklak</p>
+          <p>Admin Access: tkproject / Bapaklak@8</p>
+          <p className="pt-4">
             Need an account? <button onClick={() => onNavigate(Page.PRICING)} className="text-amber-500 font-bold hover:underline">Request Access</button>
           </p>
         </div>
