@@ -1,0 +1,7 @@
+{
+  "name": "Copy of StyleMorph AI",
+  "description": "A production-ready AI fashion tool for virtual try-ons and clothing swaps. Preserves identity and pose while naturally fitting new garments using cutting-edge AI.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
