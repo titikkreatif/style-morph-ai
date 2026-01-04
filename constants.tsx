@@ -1,9 +1,12 @@
 
 import { WebsiteConfig } from './types';
 
+// A stylish "TK" logo mark in SVG format (Data URI)
+const TK_LOGO_SVG = `data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAwIiBoZWlnaHQ9IjUwMCIgdmlld0JveD0iMCAwIDUwMCA1MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI1MDAiIGhlaWdodD0iNTAwIiByeD0iNjAiIGZpbGw9IiMwRjE3MkEiLz4KPHBhdGggZD0iTTgwIDE4MEgyMjBNMTUwIDE4MFYzODBNMzAwIDE4MFYzODBNNDIwIDE4MEwzMDAgMjgwTTQyMCAzODBMMzAwIDI4MCIgc3Ryb2tlPSIjRjU5RTBCIiBzdHJva2Utd2lkdGg9IjQwIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+`;
+
 export const DEFAULT_CONFIG: WebsiteConfig = {
   siteName: "Titik Kreatif Studio",
-  logoUrl: "https://i.ibb.co/pBqXy9z/titik-kreatif-logo.png",
+  logoUrl: TK_LOGO_SVG,
   primaryColor: "#f59e0b", // amber-500
   promoText: "New Year Sale: Get 20% extra credits with code CREATIVE2024",
   showPromoBanner: true,
