@@ -15,15 +15,18 @@ export const DEFAULT_CONFIG: WebsiteConfig = {
   showTestimonials: true
 };
 
-// Fix: Export APP_NAME and LOGO_URL for use in authentication components
 export const APP_NAME = DEFAULT_CONFIG.siteName;
 export const LOGO_URL = DEFAULT_CONFIG.logoUrl;
 
 export const PRESET_GARMENTS = [
   { id: 'g1', name: 'Premium White Tee', url: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&q=80&w=400' },
   { id: 'g2', name: 'Black Hoodie', url: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&q=80&w=400' },
-  { id: 'g3', name: 'Flannel Shirt', url: 'https://images.unsplash.com/photo-1588359348347-9bc6cbb6cf97?auto=format&fit=crop&q=80&w=400' },
+  { id: 'g3', name: 'Flannel Jacket', url: 'https://images.unsplash.com/photo-1588359348347-9bc6cbb6cf97?auto=format&fit=crop&q=80&w=400' },
   { id: 'g4', name: 'Denim Jacket', url: 'https://images.unsplash.com/photo-1576905341935-4ef2443449c0?auto=format&fit=crop&q=80&w=400' },
+  { id: 'g5', name: 'Leather Biker', url: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&q=80&w=400' },
+  { id: 'g6', name: 'Beige Trench', url: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&q=80&w=400' },
+  { id: 'g7', name: 'Silk Blouse', url: 'https://images.unsplash.com/photo-1543087903-1ac2ec7aa8c5?auto=format&fit=crop&q=80&w=400' },
+  { id: 'g8', name: 'Olive Parka', url: 'https://images.unsplash.com/photo-1544022613-e87ca75a784a?auto=format&fit=crop&q=80&w=400' },
 ];
 
 export const TESTIMONIALS = [

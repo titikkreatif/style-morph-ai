@@ -15,9 +15,10 @@ export const ToolPage: React.FC<ToolPageProps> = () => {
   const [personImg, setPersonImg] = useState<string | null>(null);
   const [garmentImg, setGarmentImg] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [resultImg, setResultImg] = useState<string | null>(null);
+  const [finishResult, setFinishResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [hasKey, setHasKey] = useState<boolean>(false);
+  const [loadingPresetId, setLoadingPresetId] = useState<string | null>(null);
 
   const [config, setConfig] = useState<GenerationConfig>({
     fit: FitType.REGULAR,
@@ -48,10 +49,31 @@ export const ToolPage: React.FC<ToolPageProps> = () => {
     }
   };
 
+  const handleSelectPreset = async (id: string, url: string) => {
+    setLoadingPresetId(id);
+    setError(null);
+    try {
+      // Use proxy or ensure CORS is handled. Unsplash usually allows cross-origin for these types of URLs.
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Could not fetch preset image.");
+      const blob = await response.blob();
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = (reader.result as string).split(',')[1];
+        setGarmentImg(base64);
+        setLoadingPresetId(null);
+      };
+      reader.readAsDataURL(blob);
+    } catch (err) {
+      console.error("Failed to load preset:", err);
+      setError("Failed to load preset garment. Please try uploading your own image or try again.");
+      setLoadingPresetId(null);
+    }
+  };
+
   const handleGenerate = async () => {
     if (!personImg || !garmentImg) return;
     
-    // Only block if Pro engine is selected and key is missing
     if (config.engine === 'pro' && !hasKey) {
       setError("Please connect your Google Cloud API key to use the Pro engine.");
       return;
@@ -61,7 +83,7 @@ export const ToolPage: React.FC<ToolPageProps> = () => {
     setError(null);
     try {
       const result = await geminiService.performClothingSwap(personImg, garmentImg, config);
-      setResultImg(result);
+      setFinishResult(result);
     } catch (err: any) {
       if (err.message === "API_KEY_MISSING") {
         setHasKey(false);
@@ -75,7 +97,7 @@ export const ToolPage: React.FC<ToolPageProps> = () => {
   };
 
   const handleReset = () => {
-    setResultImg(null);
+    setFinishResult(null);
     setError(null);
   };
 
@@ -100,7 +122,10 @@ export const ToolPage: React.FC<ToolPageProps> = () => {
               label="Person Photo" 
               description="Full body or torso" 
               previewUrl={personImg ? `data:image/jpeg;base64,${personImg}` : undefined}
-              onImageSelect={(base64) => setPersonImg(base64)}
+              onImageSelect={(base64) => {
+                setPersonImg(base64);
+                setFinishResult(null);
+              }}
             />
           </div>
 
@@ -110,18 +135,41 @@ export const ToolPage: React.FC<ToolPageProps> = () => {
               label="Clothing Image" 
               description="T-shirt, Hoodie, etc." 
               previewUrl={garmentImg ? `data:image/jpeg;base64,${garmentImg}` : undefined}
-              onImageSelect={(base64) => setGarmentImg(base64)}
+              onImageSelect={(base64) => {
+                setGarmentImg(base64);
+                setFinishResult(null);
+              }}
             />
-            <div className="grid grid-cols-4 gap-2">
-              {PRESET_GARMENTS.slice(0, 4).map(garment => (
-                <button 
-                  key={garment.id}
-                  onClick={() => alert("Presets are for visualization. Please upload your custom garment.")}
-                  className="rounded-lg overflow-hidden border-2 border-transparent hover:border-amber-500 transition-all aspect-square"
-                >
-                  <img src={garment.url} className="w-full h-full object-cover" alt={garment.name} />
-                </button>
-              ))}
+            
+            <div className="space-y-3">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Studio Presets</label>
+              <div className="grid grid-cols-4 gap-3">
+                {PRESET_GARMENTS.map(garment => (
+                  <button 
+                    key={garment.id}
+                    disabled={loadingPresetId !== null}
+                    onClick={() => handleSelectPreset(garment.id, garment.url)}
+                    className={`relative group rounded-xl overflow-hidden border-2 transition-all aspect-square bg-slate-900 ${loadingPresetId === garment.id ? 'border-amber-500 scale-95' : 'border-slate-800 hover:border-amber-500 hover:shadow-lg hover:shadow-amber-500/10'}`}
+                    title={garment.name}
+                  >
+                    <img 
+                      src={garment.url} 
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+                      alt={garment.name} 
+                    />
+                    <div className="absolute inset-0 bg-slate-950/80 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-2 text-center pointer-events-none">
+                      <span className="text-[8px] sm:text-[9px] text-white font-black leading-tight uppercase tracking-tight">
+                        {loadingPresetId === garment.id ? 'FETCHING...' : garment.name}
+                      </span>
+                    </div>
+                    {loadingPresetId === garment.id && (
+                       <div className="absolute inset-0 bg-slate-950/40 flex items-center justify-center">
+                          <div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+                       </div>
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -129,7 +177,7 @@ export const ToolPage: React.FC<ToolPageProps> = () => {
         {/* Center: Preview Canvas */}
         <div className="lg:col-span-5 space-y-6">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden min-h-[500px] flex items-center justify-center relative shadow-2xl">
-            {!resultImg && !isGenerating && (
+            {!finishResult && !isGenerating && (
               <div className="text-center p-12 space-y-4">
                 <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto text-slate-600">
                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -151,10 +199,10 @@ export const ToolPage: React.FC<ToolPageProps> = () => {
               </div>
             )}
 
-            {resultImg && personImg && (
+            {finishResult && personImg && (
               <ComparisonSlider 
                 before={`data:image/jpeg;base64,${personImg}`} 
-                after={resultImg} 
+                after={finishResult} 
               />
             )}
           </div>
@@ -166,15 +214,25 @@ export const ToolPage: React.FC<ToolPageProps> = () => {
             </div>
           )}
 
-          {resultImg && (
-            <div className="flex gap-4">
-              <Button className="flex-1" size="lg" onClick={() => {
-                const link = document.createElement('a');
-                link.href = resultImg;
-                link.download = `swap-${Date.now()}.png`;
-                link.click();
-              }}>Export Result</Button>
-              <Button variant="outline" className="px-6" onClick={handleReset}>New Project</Button>
+          {finishResult && (
+            <div className="space-y-3">
+              <div className="flex gap-4">
+                <Button className="flex-1" size="lg" onClick={() => {
+                  const link = document.createElement('a');
+                  link.href = finishResult;
+                  link.download = `swap-${Date.now()}.png`;
+                  link.click();
+                }}>Export Result</Button>
+                <Button variant="outline" className="px-6" onClick={handleReset}>New Project</Button>
+              </div>
+              <Button 
+                variant="secondary" 
+                className="w-full border border-slate-800" 
+                onClick={handleGenerate}
+                isLoading={isGenerating}
+              >
+                Regenerate
+              </Button>
             </div>
           )}
         </div>
@@ -189,7 +247,7 @@ export const ToolPage: React.FC<ToolPageProps> = () => {
                     onClick={() => setConfig({...config, engine: 'standard'})}
                     className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${config.engine === 'standard' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
                   >
-                    Standard (Free)
+                    Standard
                   </button>
                   <button 
                     onClick={() => setConfig({...config, engine: 'pro'})}
