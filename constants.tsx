@@ -1,4 +1,3 @@
-
 import { WebsiteConfig } from './types';
 
 // A stylish "TK" logo mark in SVG format (Data URI)
@@ -12,7 +11,12 @@ export const DEFAULT_CONFIG: WebsiteConfig = {
   showPromoBanner: true,
   layoutStyle: 'modern',
   heroAlignment: 'left',
-  showTestimonials: true
+  showTestimonials: true,
+  stripeLinks: {
+    starter: '',
+    pro: '',
+    business: ''
+  }
 };
 
 export const APP_NAME = DEFAULT_CONFIG.siteName;

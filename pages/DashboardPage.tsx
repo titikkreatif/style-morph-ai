@@ -1,66 +1,33 @@
 
-import React, { useState } from 'react';
-import { Page, FitType, SleeveLength } from '../types';
+import React, { useState, useEffect } from 'react';
+import { Page, FitType, SleeveLength, GarmentCategory } from '../types';
 import { Button } from '../components/Button';
+import { firestoreService } from '../services/firestoreService';
 
 interface DashboardPageProps {
   onNavigate: (page: Page) => void;
   isAdmin?: boolean;
+  userEmail: string;
 }
 
-const MOCK_HISTORY = [
-  {
-    id: '1',
-    date: '2 hours ago',
-    resultUrl: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=400',
-    config: { fit: FitType.REGULAR, sleeve: SleeveLength.SHORT, realism: 0.9 }
-  },
-  {
-    id: '2',
-    date: 'Yesterday',
-    resultUrl: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&q=80&w=400',
-    config: { fit: FitType.SLIM, sleeve: SleeveLength.LONG, realism: 0.85 }
-  },
-  {
-    id: '3',
-    date: '3 days ago',
-    resultUrl: 'https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&q=80&w=400',
-    config: { fit: FitType.LOOSE, sleeve: SleeveLength.SLEEVELESS, realism: 0.95 }
-  }
-];
-
-const MOCK_DOWNLOAD_HISTORY = [
-  {
-    id: 'dl-1',
-    filename: 'summer_collection_01.png',
-    downloadDate: 'Oct 24, 2023 • 14:20',
-    thumbnail: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=100',
-    size: '2.4 MB',
-    url: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=800'
-  },
-  {
-    id: 'dl-2',
-    filename: 'denim_jacket_swap_final.png',
-    downloadDate: 'Oct 22, 2023 • 09:15',
-    thumbnail: 'https://images.unsplash.com/photo-1576905341935-4ef2443449c0?auto=format&fit=crop&q=80&w=100',
-    size: '3.1 MB',
-    url: 'https://images.unsplash.com/photo-1576905341935-4ef2443449c0?auto=format&fit=crop&q=80&w=800'
-  },
-  {
-    id: 'dl-3',
-    filename: 'tk_studio_export_772.jpg',
-    downloadDate: 'Oct 15, 2023 • 18:45',
-    thumbnail: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&q=80&w=100',
-    size: '1.8 MB',
-    url: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&q=80&w=800'
-  }
-];
-
-export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isAdmin }) => {
+export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isAdmin, userEmail }) => {
   const [activeTab, setActiveTab] = useState<'generations' | 'downloads'>('generations');
+  const [history, setHistory] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      setIsLoading(true);
+      if (userEmail) {
+        const data = await firestoreService.getUserHistory(userEmail);
+        setHistory(data);
+      }
+      setIsLoading(false);
+    };
+    fetchHistory();
+  }, [userEmail]);
 
   const handleReDownload = (url: string, filename: string) => {
-    // In a real app, this would trigger a browser download
     const link = document.createElement('a');
     link.href = url;
     link.download = filename;
@@ -90,7 +57,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isAdmi
         </div>
       </div>
 
-      {/* Tab Switcher */}
       <div className="flex items-center gap-1 p-1.5 bg-slate-900/50 border border-slate-800 rounded-2xl w-fit mb-10">
         <button 
           onClick={() => setActiveTab('generations')}
@@ -106,72 +72,60 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isAdmi
         </button>
       </div>
 
-      {activeTab === 'generations' ? (
+      {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          {MOCK_HISTORY.map((item) => (
-            <div key={item.id} className="group relative bg-slate-900/40 border border-slate-800 rounded-3xl overflow-hidden flex flex-col hover:border-white/20 transition-all shadow-xl hover:shadow-2xl hover:shadow-amber-500/5">
-              <div className="relative aspect-[3/4] overflow-hidden">
-                <img 
-                  src={item.resultUrl} 
-                  alt="Generation Result" 
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                />
-                <div className="absolute inset-0 bg-slate-950/80 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3 p-6 backdrop-blur-sm">
-                  <Button size="sm" className="w-full" onClick={() => window.open(item.resultUrl, '_blank')}>
-                    Export Asset
-                  </Button>
-                  <Button variant="outline" size="sm" className="w-full border-white/10 text-white hover:bg-white/5" onClick={() => onNavigate(Page.TOOL)}>
-                    Open in Engine
-                  </Button>
-                </div>
-              </div>
-              
-              <div className="p-5 space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-slate-500 tracking-wide">{item.date}</span>
-                  <span className="text-[10px] bg-emerald-500/10 text-emerald-500 px-2 py-1 rounded-full uppercase font-black tracking-tighter">Rendered</span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <span className="text-[10px] bg-slate-800/80 text-slate-300 px-2.5 py-1.5 rounded-lg capitalize font-bold">{item.config.fit} Fit</span>
-                  <span className="text-[10px] bg-slate-800/80 text-slate-300 px-2.5 py-1.5 rounded-lg capitalize font-bold">{item.config.sleeve} Sleeves</span>
-                </div>
-              </div>
-            </div>
+          {[1,2,3,4].map(i => (
+            <div key={i} className="aspect-[3/4] bg-slate-900/50 rounded-3xl animate-pulse"></div>
           ))}
         </div>
-      ) : (
-        <div className="bg-slate-900/30 border border-slate-800 rounded-3xl overflow-hidden divide-y divide-slate-800">
-          <div className="px-8 py-5 bg-slate-900/50 flex items-center justify-between">
-            <h3 className="text-sm font-black text-slate-500 uppercase tracking-widest">Recent Exports</h3>
-            <span className="text-xs text-slate-500">{MOCK_DOWNLOAD_HISTORY.length} Items found</span>
-          </div>
-          {MOCK_DOWNLOAD_HISTORY.length > 0 ? (
-            MOCK_DOWNLOAD_HISTORY.map((dl) => (
-              <div key={dl.id} className="p-4 px-8 flex items-center justify-between hover:bg-slate-800/20 transition-colors group">
-                <div className="flex items-center gap-6">
-                  <div className="w-16 h-16 rounded-xl overflow-hidden border border-slate-800 shrink-0 group-hover:border-amber-500/50 transition-colors">
-                    <img src={dl.thumbnail} alt={dl.filename} className="w-full h-full object-cover" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-slate-200 group-hover:text-amber-500 transition-colors">{dl.filename}</h4>
-                    <p className="text-xs text-slate-500 mt-1 font-medium">{dl.downloadDate} • {dl.size}</p>
+      ) : activeTab === 'generations' ? (
+        history.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {history.map((item) => (
+              <div key={item.id} className="group relative bg-slate-900/40 border border-slate-800 rounded-3xl overflow-hidden flex flex-col hover:border-white/20 transition-all shadow-xl hover:shadow-2xl hover:shadow-amber-500/5">
+                <div className="relative aspect-[3/4] overflow-hidden">
+                  <img 
+                    src={item.resultImageUrl} 
+                    alt="Generation Result" 
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                  />
+                  <div className="absolute inset-0 bg-slate-950/80 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3 p-6 backdrop-blur-sm">
+                    <Button size="sm" className="w-full" onClick={() => window.open(item.resultImageUrl, '_blank')}>
+                      Export Asset
+                    </Button>
+                    <Button variant="outline" size="sm" className="w-full border-white/10 text-white hover:bg-white/5" onClick={() => onNavigate(Page.TOOL)}>
+                      Open in Engine
+                    </Button>
                   </div>
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="px-6 border-slate-700 text-slate-400 group-hover:border-amber-500 group-hover:text-amber-500"
-                  onClick={() => handleReDownload(dl.url, dl.filename)}
-                >
-                  Re-download
-                </Button>
+                
+                <div className="p-5 space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-slate-500 tracking-wide">{item.date}</span>
+                    <span className="text-[10px] bg-emerald-500/10 text-emerald-500 px-2 py-1 rounded-full uppercase font-black tracking-tighter">Rendered</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {Array.isArray(item.config?.category) ? (
+                      item.config.category.map((cat: string) => (
+                        <span key={cat} className="text-[9px] bg-slate-800 text-amber-500 px-2 py-1 rounded-md uppercase font-black border border-amber-500/20">{cat}</span>
+                      ))
+                    ) : (
+                      <span className="text-[9px] bg-slate-800 text-amber-500 px-2 py-1 rounded-md uppercase font-black border border-amber-500/20">{item.config?.category || 'Item'}</span>
+                    )}
+                  </div>
+                </div>
               </div>
-            ))
-          ) : (
-            <div className="py-20 text-center">
-              <p className="text-slate-500 font-medium">No download records found.</p>
-            </div>
-          )}
+            ))}
+          </div>
+        ) : (
+          <div className="py-20 text-center bg-slate-900/20 rounded-3xl border border-dashed border-slate-800">
+            <p className="text-slate-500 font-medium">No generations found yet. Start your first project!</p>
+            <Button onClick={() => onNavigate(Page.TOOL)} className="mt-4" variant="outline">Launch Engine</Button>
+          </div>
+        )
+      ) : (
+        <div className="bg-slate-900/30 border border-slate-800 rounded-3xl overflow-hidden divide-y divide-slate-800 text-center py-20">
+            <p className="text-slate-500 font-medium">Download history integration coming soon.</p>
         </div>
       )}
     </div>

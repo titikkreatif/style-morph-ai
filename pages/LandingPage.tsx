@@ -43,7 +43,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, config }) 
             </p>
             
             <div className={`flex flex-col sm:flex-row items-center gap-4 ${isCentered ? 'justify-center' : ''}`}>
-              <Button size="lg" onClick={() => onNavigate(Page.TOOL)} style={{ backgroundColor: config.primaryColor }}>Launch Swap Engine</Button>
+              <button 
+                className="px-8 py-4 text-lg font-bold rounded-xl text-slate-950 shadow-2xl transition-all hover:scale-105 active:scale-95" 
+                onClick={() => onNavigate(Page.TOOL)} 
+                style={{ backgroundColor: config.primaryColor }}
+              >
+                Launch Swap Engine
+              </button>
               <Button variant="outline" size="lg" onClick={() => onNavigate(Page.PRICING)}>Explore Studio Plans</Button>
             </div>
           </div>
@@ -53,11 +59,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, config }) 
                <div className="relative z-10 rounded-3xl border border-slate-800 bg-slate-900/50 p-4 shadow-2xl backdrop-blur-sm">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-4">
-                      <img src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=400" className="rounded-xl grayscale brightness-50 border border-slate-800" alt="Original" />
+                      <img src="https://images.unsplash.com/photo-1617137968427-85924c800a22?auto=format&fit=crop&q=80&w=400" className="rounded-xl grayscale brightness-50 border border-slate-800" alt="Original" />
                       <p className="text-center text-[10px] font-bold text-slate-500 uppercase tracking-widest">Asset Context</p>
                     </div>
                     <div className="space-y-4">
-                      <img src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=400" className="rounded-xl shadow-xl border border-white/10" style={{ boxShadow: `0 0 40px ${config.primaryColor}1A` }} alt="AI Generated" />
+                      <img src="https://images.unsplash.com/photo-1617137968427-85924c800a22?auto=format&fit=crop&q=80&w=400" className="rounded-xl shadow-xl border border-white/10" style={{ boxShadow: `0 0 40px ${config.primaryColor}1A` }} alt="AI Generated" />
                       <p className="text-center text-[10px] font-bold uppercase tracking-widest" style={{ color: config.primaryColor }}>Studio Result</p>
                     </div>
                   </div>

@@ -11,9 +11,20 @@ export enum SleeveLength {
   SLEEVELESS = 'sleeveless'
 }
 
+export enum GarmentCategory {
+  TOP = 'top',
+  BOTTOM = 'bottom',
+  SHOES = 'shoes',
+  HEADWEAR = 'headwear',
+  ACCESSORY = 'accessory'
+}
+
 export interface GenerationConfig {
   fit: FitType;
   sleeve: SleeveLength;
+  category: GarmentCategory[];
+  targetColor?: string;
+  backgroundPrompt?: string;
   realism: number;
   colorCorrection: boolean;
   customPrompt?: string;
@@ -38,6 +49,11 @@ export interface WebsiteConfig {
   layoutStyle: 'modern' | 'classic' | 'minimal';
   heroAlignment: 'left' | 'center';
   showTestimonials: boolean;
+  stripeLinks: {
+    starter?: string;
+    pro?: string;
+    business?: string;
+  };
 }
 
 export enum Page {
@@ -46,5 +62,6 @@ export enum Page {
   PRICING = 'pricing',
   DASHBOARD = 'dashboard',
   LOGIN = 'login',
+  SIGNUP = 'signup',
   ADMIN = 'admin'
 }

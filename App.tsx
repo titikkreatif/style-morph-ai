@@ -6,20 +6,78 @@ import { ToolPage } from './pages/ToolPage';
 import { PricingPage } from './pages/PricingPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { LoginPage } from './pages/LoginPage';
+import { SignupPage } from './pages/SignupPage';
 import { AdminPage } from './pages/AdminPage';
+import { AdminLoginPage } from './pages/AdminLoginPage';
 import { DEFAULT_CONFIG } from './constants';
+import { firestoreService } from './services/firestoreService';
+import { auth } from './lib/firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>(Page.LANDING);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userEmail, setUserEmail] = useState<string>('');
   const [userRole, setUserRole] = useState<'user' | 'admin'>('user');
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isAdminSessionActive, setIsAdminSessionActive] = useState(false);
   
-  // Website configuration state with local storage persistence
-  const [websiteConfig, setWebsiteConfig] = useState<WebsiteConfig>(() => {
-    const saved = localStorage.getItem('site_config');
-    return saved ? JSON.parse(saved) : DEFAULT_CONFIG;
-  });
+  const [websiteConfig, setWebsiteConfig] = useState<WebsiteConfig>(DEFAULT_CONFIG);
+
+  // Auth State Listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setIsAuthenticated(true);
+        setUserEmail(user.email || '');
+        
+        // Basic admin check for Firebase users
+        if (user.email?.includes('admin') || user.email === 'tkproject@gmail.com') {
+          setUserRole('admin');
+        } else {
+          setUserRole('user');
+        }
+      } else {
+        setIsAuthenticated(false);
+        setUserEmail('');
+        setUserRole('user');
+      }
+      setIsAuthLoading(false);
+    }, (error) => {
+      console.error("Auth Listener Error:", error);
+      setIsAuthLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Load configuration from Firestore
+  useEffect(() => {
+    let isMounted = true;
+    const loadConfig = async () => {
+      try {
+        const fetchWithTimeout = async () => {
+          const timeout = new Promise<null>((_, reject) => 
+            setTimeout(() => reject(new Error('Config fetch timed out')), 2000)
+          );
+          return Promise.race([firestoreService.getWebsiteConfig(), timeout]);
+        };
+
+        const remoteConfig = await fetchWithTimeout();
+        
+        if (isMounted && remoteConfig) {
+          setWebsiteConfig(remoteConfig);
+          document.documentElement.style.setProperty('--primary-color', remoteConfig.primaryColor);
+        }
+      } catch (err) {
+        console.log("Website configuration loaded from local defaults.");
+      }
+    };
+    
+    loadConfig();
+    return () => { isMounted = false; };
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -27,44 +85,84 @@ const App: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleUpdateConfig = (newConfig: WebsiteConfig) => {
+  const handleUpdateConfig = async (newConfig: WebsiteConfig) => {
     setWebsiteConfig(newConfig);
-    localStorage.setItem('site_config', JSON.stringify(newConfig));
-    // Dynamic color update
     document.documentElement.style.setProperty('--primary-color', newConfig.primaryColor);
+    await firestoreService.updateWebsiteConfig(newConfig);
   };
 
+  // Check if either standard auth or admin session is active
+  const isAuthorized = isAuthenticated || isAdminSessionActive;
+  const effectiveEmail = isAdminSessionActive ? 'admin@studio.local' : userEmail;
+  const effectiveRole = (isAdminSessionActive || userRole === 'admin') ? 'admin' : 'user';
+
   const handleAuthNavigation = (targetPage: Page) => {
-    if (!isAuthenticated && (targetPage === Page.TOOL || targetPage === Page.DASHBOARD || targetPage === Page.ADMIN)) {
+    if (!isAuthorized && targetPage !== Page.LANDING && targetPage !== Page.PRICING && targetPage !== Page.SIGNUP) {
       setCurrentPage(Page.LOGIN);
-    } else if (targetPage === Page.ADMIN && userRole !== 'admin') {
-      setCurrentPage(Page.DASHBOARD);
     } else {
       setCurrentPage(targetPage);
     }
   };
 
-  const handleLoginSuccess = (username: string) => {
-    setIsAuthenticated(true);
-    if (username === 'tkproject') {
-      setUserRole('admin');
+  const handleAuthSuccess = (email: string) => {
+    if (email.includes('admin') || email === 'tkproject@gmail.com') {
       setCurrentPage(Page.ADMIN);
     } else {
-      setUserRole('user');
       setCurrentPage(Page.TOOL);
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      if (isAuthenticated) await signOut(auth);
+      setIsAdminSessionActive(false);
+      setCurrentPage(Page.LANDING);
+    } catch (error) {
+      console.error("Logout error", error);
+    }
+  };
+
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Initialising Studio...</p>
+        </div>
+      </div>
+    );
+  }
+
   const renderPage = () => {
+    // Shared page logic: If not authorized (neither Firebase nor hardcoded Admin), gate restricted pages
+    if (!isAuthorized && (currentPage === Page.TOOL || currentPage === Page.DASHBOARD)) {
+      return <LoginPage onLoginSuccess={handleAuthSuccess} onNavigate={handleAuthNavigation} />;
+    }
+
     switch (currentPage) {
       case Page.LANDING: return <LandingPage onNavigate={handleAuthNavigation} config={websiteConfig} />;
-      case Page.TOOL: return <ToolPage onNavigate={handleAuthNavigation} />;
+      case Page.TOOL: return <ToolPage onNavigate={handleAuthNavigation} userEmail={effectiveEmail} />;
       case Page.PRICING: return <PricingPage onNavigate={handleAuthNavigation} />;
-      case Page.DASHBOARD: return <DashboardPage onNavigate={handleAuthNavigation} isAdmin={userRole === 'admin'} />;
-      case Page.ADMIN: return <AdminPage config={websiteConfig} onUpdateConfig={handleUpdateConfig} onNavigate={setCurrentPage} />;
+      case Page.DASHBOARD: return <DashboardPage onNavigate={handleAuthNavigation} isAdmin={effectiveRole === 'admin'} userEmail={effectiveEmail} />;
+      case Page.ADMIN: 
+        if (!isAdminSessionActive) {
+          return (
+            <AdminLoginPage 
+              onLoginSuccess={() => setIsAdminSessionActive(true)} 
+              onCancel={() => setCurrentPage(Page.LANDING)} 
+            />
+          );
+        }
+        return <AdminPage config={websiteConfig} onUpdateConfig={handleUpdateConfig} onNavigate={setCurrentPage} />;
       case Page.LOGIN: return (
         <LoginPage 
-          onLoginSuccess={handleLoginSuccess} 
+          onLoginSuccess={handleAuthSuccess} 
+          onNavigate={handleAuthNavigation} 
+        />
+      );
+      case Page.SIGNUP: return (
+        <SignupPage 
+          onSignupSuccess={handleAuthSuccess} 
           onNavigate={handleAuthNavigation} 
         />
       );
@@ -74,7 +172,6 @@ const App: React.FC = () => {
 
   return (
     <div className={`flex flex-col min-h-screen ${websiteConfig.layoutStyle}`}>
-      {/* Promotion Banner */}
       {websiteConfig.showPromoBanner && (
         <div 
           className="fixed top-0 left-0 right-0 z-[60] py-2 text-center text-xs font-bold tracking-widest text-slate-950 px-4 transition-all"
@@ -84,7 +181,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Navigation */}
       <nav className={`fixed left-0 right-0 z-50 transition-all duration-300 ${websiteConfig.showPromoBanner ? 'top-8' : 'top-0'} ${isScrolled ? 'bg-slate-950/90 backdrop-blur-xl border-b border-slate-900 py-3' : 'bg-transparent py-5'}`}>
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           <div 
@@ -101,19 +197,19 @@ const App: React.FC = () => {
             <button onClick={() => setCurrentPage(Page.LANDING)} className={`hover:text-white transition-colors ${currentPage === Page.LANDING ? 'text-white font-bold' : ''}`}>Studio</button>
             <button onClick={() => handleAuthNavigation(Page.TOOL)} className={`hover:text-white transition-colors ${currentPage === Page.TOOL ? 'text-white font-bold' : ''}`}>Swap Engine</button>
             <button onClick={() => handleAuthNavigation(Page.DASHBOARD)} className={`hover:text-white transition-colors ${currentPage === Page.DASHBOARD ? 'text-white font-bold' : ''}`}>History</button>
-            {userRole === 'admin' && (
+            {effectiveRole === 'admin' && (
               <button onClick={() => setCurrentPage(Page.ADMIN)} className={`text-amber-500 font-bold hover:text-amber-400 transition-colors ${currentPage === Page.ADMIN ? 'underline underline-offset-4' : ''}`}>Admin Panel</button>
             )}
             <button onClick={() => setCurrentPage(Page.PRICING)} className={`hover:text-white transition-colors ${currentPage === Page.PRICING ? 'text-white font-bold' : ''}`}>Pricing</button>
           </div>
 
           <div className="flex items-center gap-4">
-            {isAuthenticated ? (
+            {isAuthorized ? (
               <button 
-                className="text-sm font-semibold text-slate-400 hover:text-white"
+                className={`text-sm font-semibold transition-colors ${isAdminSessionActive ? 'text-amber-500 hover:text-amber-400' : 'text-slate-400 hover:text-white'}`}
                 onClick={() => handleAuthNavigation(Page.DASHBOARD)}
               >
-                Account
+                {isAdminSessionActive ? 'Studio Admin' : effectiveEmail.split('@')[0]}
               </button>
             ) : (
               <button 
@@ -129,16 +225,12 @@ const App: React.FC = () => {
               style={{ backgroundColor: websiteConfig.primaryColor }}
               onClick={() => handleAuthNavigation(Page.TOOL)}
             >
-              {isAuthenticated ? 'Get Credits' : 'Start Trial'}
+              {isAuthorized ? (isAdminSessionActive ? 'Admin Controls' : 'Get Credits') : 'Start Trial'}
             </button>
 
-            {isAuthenticated && (
+            {isAuthorized && (
               <button 
-                onClick={() => {
-                  setIsAuthenticated(false);
-                  setUserRole('user');
-                  setCurrentPage(Page.LANDING);
-                }}
+                onClick={handleLogout}
                 className="p-2 text-slate-500 hover:text-red-400 transition-colors"
                 title="Logout"
               >
@@ -151,12 +243,10 @@ const App: React.FC = () => {
         </div>
       </nav>
 
-      {/* Main Content */}
       <main className={`flex-1 ${websiteConfig.showPromoBanner ? 'pt-24' : 'pt-16'}`}>
         {renderPage()}
       </main>
 
-      {/* Footer */}
       <footer className="bg-slate-950 border-t border-slate-900 py-12 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-12 mb-12">
@@ -180,7 +270,7 @@ const App: React.FC = () => {
               <ul className="text-sm text-slate-500 space-y-2">
                 <li className="hover:text-amber-500 cursor-pointer transition-colors">Creative Blog</li>
                 <li className="hover:text-amber-500 cursor-pointer transition-colors">Documentation</li>
-                <li className="hover:text-amber-500 cursor-pointer transition-colors" onClick={() => userRole === 'admin' ? setCurrentPage(Page.ADMIN) : null}>Admin Access</li>
+                <li className="hover:text-amber-500 cursor-pointer transition-colors" onClick={() => setCurrentPage(Page.ADMIN)}>Admin Access</li>
               </ul>
             </div>
             <div>
